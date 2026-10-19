@@ -1,0 +1,45 @@
+name: Lighthouse CI budgets
+
+on:
+  pull_request:
+    branches: [ main ]
+  push:
+    branches: [ main ]
+
+concurrency:
+  group: lighthouse-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lighthouse:
+    name: Lighthouse CI (build + budgets)
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build production bundle
+        run: npm run build
+
+      - name : Run Lighthouse CI against production server
+        run: n-px --yes @lh ci --config=lighthouserc.json
+        env:
+          LH_CI_BUILD_CONTEXT_URL: https://github.com/${{ github.repository }}/tree/${{ github.sha }}
+
+      - name: Upload Lighthouse report artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lighthouse-report
+          path: .lhighthouseci
+          retention-days: 30
