@@ -2,9 +2,12 @@ name: Lighthouse CI budgets
 
 on:
   pull_request:
-    branches: [ main ]
+    branches: [main]
   push:
-    branches: [ main ]
+    branches: [main]
+
+permissions:
+  contents: read
 
 concurrency:
   group: lighthouse-${{ github.ref }}
@@ -16,30 +19,25 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Setup Node
-        uses: actions/setup-node@v4
+      - uses: actions/checkout@v4
+      # Version comes from "packageManager" in package.json.
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
         with:
-          node-version: 20
-          cache: npm
-
-      - name: Install dependencies
-        run: npm ci
-
-      - name: Build production bundle
-        run: npm run build
-
-      - name : Run Lighthouse CI against production server
-        run: n-px --yes @lh ci --config=lighthouserc.json
+          node-version: 24
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      # The API serves the built dashboard, so build everything first.
+      - run: pnpm build
+      - name: Run Lighthouse CI against the built dashboard
+        run: npx --yes @lhci/cli@0.14.0 autorun --config=lighthouserc.json
         env:
-          LH_CI_BUILD_CONTEXT_URL: https://github.com/${{ github.repository }}/tree/${{ github.sha }}
-
-      - name: Upload Lighthouse report artifact
+          LHCI_BUILD_CONTEXT__CURRENT_HASH: ${{ github.sha }}
+      - name: Upload Lighthouse report
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: lighthouse-report
-          path: .lhighthouseci
+          path: .lighthouseci
+          if-no-files-found: ignore
           retention-days: 30
