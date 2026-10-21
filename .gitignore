@@ -4,8 +4,12 @@ node_modules/
 target/
 dist/
 coverage/
+temp_auto_push.bat
 .DS_Store
 data/
 *.tsbuildinfo
 test-results/
 playwright-report/
+.lighthouseci/
+.gitignore
+branch_structure.json
